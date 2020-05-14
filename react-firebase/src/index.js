@@ -3,13 +3,6 @@ import ReactDOM from 'react-dom';
 import './index.css';
 
 class Square extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            value: null,
-        }
-    }
-
     render() {
         return (
             <button
@@ -26,21 +19,80 @@ class Board extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            squares: Array(9).fill(null),
             xIsNext: true,
+            squares: Array(12).fill(null),
+            gameBoard: [3, 2, 6, 2, 6, 5, 5, 4, 1, 3, 1, 4],
+            history: [],
+            clickCount: 1,
+            isPair: false,
+            pairCount: 0,
+            isStart: true,
         }
     }
 
     handleClick(i) {
         const squares = this.state.squares.slice();
-        if (calculateWinner(squares) || squares[i]) {
+        if (squares[i] && this.state.gameBoard.length === 0) {
             return;
         }
-        squares[i] = this.state.xIsNext ? 'X' : 'O';
+
+        // 盤表示
+        squares[i] = this.state.gameBoard[i];
+
+        // 表示履歴
+        this.state.history.push(i);
+
+        // ペア判定
+        let isPair = this.isPair(this.state.history);
+        let pairCount = this.state.pairCount;
+        if (isPair) {
+            pairCount = pairCount + 1;
+        }
+
         this.setState({
             squares: squares,
-            xIsNext: !this.state.xIsNext,
+            history: this.state.history,
+            clickCount: this.state.clickCount + 1,
+            isPair: isPair,
+            pairCount: pairCount,
         });
+
+        // ペア一致しない場合はボード版を戻す
+        this.reverseBoard(this.state.history, squares, isPair);
+    }
+
+    isPair(history) {
+        if (!this.isTwoClick(history)) {
+            return false;
+        }
+
+        const oneIndexHistory = history[history.length - 2];
+        const twoIndexHistory = history[history.length - 1];
+        if (this.state.gameBoard[twoIndexHistory] === this.state.gameBoard[oneIndexHistory]) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    isTwoClick(history) {
+        const isTwoClick = history.length % 2;
+        return !(isTwoClick === 1)
+    }
+
+    reverseBoard(history, squares, isPair) {
+        if (!this.isTwoClick(history)) {
+            return;
+        }
+
+        if (!isPair) {
+            setTimeout(() => {
+                // ボードを2つ戻す
+                squares[history[history.length - 2]] = null;
+                squares[history[history.length - 1]] = null;
+                this.setState({ squares: squares, });
+            }, 300);
+        }
     }
 
     renderSquare(i) {
@@ -53,31 +105,27 @@ class Board extends React.Component {
     }
 
     render() {
-        const winner = calculateWinner(this.state.squares);
-        let status;
-        if (winner) {
-            status = 'Winner: ' + winner;
-        } else {
-            status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-        }
-
+        const isEnd = (this.state.squares[0] && this.state.pairCount === this.state.gameBoard.length / 2);
         return (
             <div>
-                <div className="status">{status}</div>
+                <p>{!isEnd ? (this.state.pairCount + 'ペア　') : 'ゲーム終了'}</p>
                 <div className="board-row">
                     {this.renderSquare(0)}
                     {this.renderSquare(1)}
                     {this.renderSquare(2)}
+                    {this.renderSquare(3)}
                 </div>
                 <div className="board-row">
-                    {this.renderSquare(3)}
                     {this.renderSquare(4)}
                     {this.renderSquare(5)}
-                </div>
-                <div className="board-row">
                     {this.renderSquare(6)}
                     {this.renderSquare(7)}
+                </div>
+                <div className="board-row">
                     {this.renderSquare(8)}
+                    {this.renderSquare(9)}
+                    {this.renderSquare(10)}
+                    {this.renderSquare(11)}
                 </div>
             </div>
         );
@@ -106,23 +154,3 @@ ReactDOM.render(
     <Game />,
     document.getElementById('root')
 );
-
-function calculateWinner(squares) {
-    const lines = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6],
-    ];
-    for (let i = 0; i < lines.length; i++) {
-        const [a, b, c] = lines[i];
-        if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-            return squares[a];
-        }
-    }
-    return null;
-}
