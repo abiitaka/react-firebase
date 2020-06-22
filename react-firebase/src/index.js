@@ -18,9 +18,12 @@ class Square extends React.Component {
 class Board extends React.Component {
     constructor(props) {
         super(props);
+
         const squareCount = 12;
+        const initGameBoard = this.generateBoard(squareCount);
+
         this.state = {
-            gameBoard: this.gnerateBoard(squareCount),
+            gameBoard: initGameBoard,
             selectBoard: Array(squareCount).fill(null),
             history: [{ selectBoard: Array(squareCount).fill(null) }],
             previous: null,
@@ -53,7 +56,7 @@ class Board extends React.Component {
     }
 
     // 盤のペア組み合わせ生成
-    gnerateBoard(squareCount) {
+    generateBoard(squareCount) {
         let result = [];
         // ペアの数字を生成
         for (let i = 1; i <= squareCount / 2; i++) {
