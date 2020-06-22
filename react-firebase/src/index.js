@@ -18,97 +18,93 @@ class Square extends React.Component {
 class Board extends React.Component {
     constructor(props) {
         super(props);
+        const squareCount = 12;
         this.state = {
-            xIsNext: true,
-            squares: Array(12).fill(null),
-            gameBoard: [3, 2, 6, 2, 6, 5, 5, 4, 1, 3, 1, 4],
-            history: [],
-            clickCount: 1,
-            isPair: false,
-            pairCount: 0,
-            isStart: true,
+            gameBoard: this.gnerateBoard(squareCount),
+            selectBoard: Array(squareCount).fill(null),
+            history: [{ selectBoard: Array(squareCount).fill(null) }],
+            previous: null,
+            isPair: null,
         }
     }
 
-    handleClick(i) {
-        const squares = this.state.squares.slice();
-        if (squares[i] && this.state.gameBoard.length === 0) {
-            return;
-        }
-
+    handleClick(current) {
         // 盤表示
-        squares[i] = this.state.gameBoard[i];
-
-        // 表示履歴
-        this.state.history.push(i);
+        const selectBoard = this.state.selectBoard.slice();
+        selectBoard[current] = this.state.gameBoard[current];
 
         // ペア判定
-        let isPair = this.isPair(this.state.history);
-        let pairCount = this.state.pairCount;
-        if (isPair) {
-            pairCount = pairCount + 1;
+        let isPair = null, previous = null;
+        if (this.state.previous == null) {
+            previous = current;
+        } else {
+            isPair = this.isPair(selectBoard[this.state.previous], selectBoard[current]);
         }
+
+        // 履歴
+        const history = this.state.history.slice();
 
         this.setState({
-            squares: squares,
-            history: this.state.history,
-            clickCount: this.state.clickCount + 1,
+            selectBoard: selectBoard,
+            history: history.concat([{ selectBoard: selectBoard }]),
+            previous: previous,
             isPair: isPair,
-            pairCount: pairCount,
         });
-
-        // ペア一致しない場合はボード版を戻す
-        this.reverseBoard(this.state.history, squares, isPair);
     }
 
-    isPair(history) {
-        if (!this.isTwoClick(history)) {
-            return false;
+    // 盤のペア組み合わせ生成
+    gnerateBoard(squareCount) {
+        let result = [];
+        // ペアの数字を生成
+        for (let i = 1; i <= squareCount / 2; i++) {
+            result.push(i, i);
         }
+        // シャッフル(Fisher-Yates shufflアルゴリズム)
+        for (let i = squareCount - 1; i > 0; i--) {
+            let random = Math.floor(Math.random() * (i + 1));
+            let tmp = result[i];
+            result[i] = result[random];
+            result[random] = tmp;
+        }
+        return result;
+    }
 
-        const oneIndexHistory = history[history.length - 2];
-        const twoIndexHistory = history[history.length - 1];
-        if (this.state.gameBoard[twoIndexHistory] === this.state.gameBoard[oneIndexHistory]) {
+    // ペアをチェックする
+    isPair(previous, current) {
+        if (previous == null && current == null) {
+            return false;
+        } else if (previous === current) {
             return true;
         } else {
             return false;
         }
     }
 
-    isTwoClick(history) {
-        const isTwoClick = history.length % 2;
-        return !(isTwoClick === 1)
-    }
-
-    reverseBoard(history, squares, isPair) {
-        if (!this.isTwoClick(history)) {
-            return;
-        }
-
-        if (!isPair) {
-            setTimeout(() => {
-                // ボードを2つ戻す
-                squares[history[history.length - 2]] = null;
-                squares[history[history.length - 1]] = null;
-                this.setState({ squares: squares, });
-            }, 300);
-        }
-    }
-
     renderSquare(i) {
         return (
             <Square
-                value={this.state.squares[i]}
+                value={this.state.selectBoard[i]}
                 onClick={() => this.handleClick(i)}
             />
         );
     }
 
     render() {
-        const isEnd = (this.state.squares[0] && this.state.pairCount === this.state.gameBoard.length / 2);
+        // ペアにならない場合は盤を戻す 
+        if (this.state.isPair === false) {
+            setTimeout(() => {
+                const history = this.state.history.slice(0, this.state.history.length - 2);
+                const selectBoard = history[history.length - 1].selectBoard.slice();
+                this.setState({
+                    selectBoard: selectBoard,
+                    history: history,
+                    isPair: null,
+                });
+            }, 300);
+        }
         return (
             <div>
-                <p>{!isEnd ? (this.state.pairCount + 'ペア　') : 'ゲーム終了'}</p>
+                <p>{this.state.selectBoard.indexOf(null) === -1 ? 'ゲーム終了' : ''}</p>
                 <div className="board-row">
                     {this.renderSquare(0)}
                     {this.renderSquare(1)}
